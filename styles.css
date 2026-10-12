@@ -277,6 +277,15 @@ body{
 }
 
 /* ============ Финал ============ */
+.send-fallback{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.send-fallback .btn{
+  flex:none;width:100%;min-width:0;
+  text-align:center;text-decoration:none;
+  display:block;line-height:1.45;
+}
+.send-fallback .btn--ghost{color:var(--wine);line-height:1.45}
+.send-fallback[hidden]{display:none}
+
 .summary{
   display:grid;gap:2px;
   border-radius:18px;

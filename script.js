@@ -233,8 +233,15 @@ function finalScreen() {
     </dl>
 
     <div class="actions">
-      <button class="btn btn--yes" type="button" id="agreeBtn">Я согласна! 2</button>
+      <button class="btn btn--yes" type="button" id="agreeBtn">Я согласна! </button>
     </div>
+
+    <div class="send-fallback" id="sendFallback" hidden>
+      <a class="btn btn--yes" id="openTgApp" href="#">Открыть чат в Telegram</a>
+      <a class="btn btn--ghost" id="openTgWeb" href="#" target="_blank" rel="noopener">Открыть в обычном браузере</a>
+      <p class="note">Сайт открыт внутри Telegram — поэтому текст не мог подставиться сам. Нажми первую кнопку: сообщение уже будет в поле отправки.</p>
+    </div>
+
     <p class="note" id="copyNote"></p>
     <p class="note" style="margin-top:4px">
       <button type="button" class="linkish" id="restartBtn">Заполнить заново</button>
@@ -383,6 +390,12 @@ function setNote(text) {
 const IS_MOBILE = /Android|iPhone|iPad|iPod|iPodTouch|Mobile|Silk|Kindle/i.test(navigator.userAgent)
   || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(pointer: fine)').matches);
 
+// Сайт открыт во встроенном браузере Telegram: tg://-переходы там заблокированы,
+// текст сам не подставится — показываем кнопки, которые открывают приложение по нажатию.
+const IN_TELEGRAM = /Telegram|TelegramBot|Telegram-iOS/i.test(navigator.userAgent)
+  || !!window.TelegramWebview
+  || /(^|\.)telegram\.org|t\.me/i.test(document.referrer || '');
+
 function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => copyFallback(text));
@@ -410,22 +423,35 @@ function sendToTelegram() {
 
   // 1) tg://resolve — Telegram сразу открывает чат с уже набранным текстом.
   const deepLink = `tg://resolve?domain=${user}&text=${enc}`;
-  // 2) Официальный share-ссылка: открывает выбор чата, текст уже лежит в поле.
-  const shareLink = `https://t.me/share/url?url=${enc}&text=${enc}`;
+  // 2) Официальная share-ссылка: открывает выбор чата, текст уже лежит в поле.
+  const shareLink = `https://t.me/share/url?url=${enc}`;
   // 3) Просто чат (последний вариант).
   const webLink = `https://t.me/${user}?text=${enc}`;
 
   copyText(message).then((copied) => {
-    if (copied) {
-      setNote(IS_MOBILE
-        ? 'Открываю Telegram — текст уже должен быть в поле отправки.'
-        : 'Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
-      showToast('Готово! Открываю Telegram');
-    } else {
+    if (!copied) {
       setNote('Открой чат в Telegram и напиши «согласна» — детали я уже знаю.');
       showToast('Не получилось скопировать текст автоматически');
+      return;
     }
+    setNote(IN_TELEGRAM
+      ? 'Текст скопирован. Нажми «Открыть чат в Telegram» — сообщение будет в поле отправки.'
+      : IS_MOBILE
+        ? 'Текст скопирован. Открываю Telegram — сообщение должно быть в поле отправки.'
+        : 'Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
+    showToast('Готово! Открываю Telegram');
   });
+
+  // Во встроенном браузере Telegram автопереход не сработает — только по нажатию.
+  if (IN_TELEGRAM) {
+    const box = document.getElementById('sendFallback');
+    const appLink = document.getElementById('openTgApp');
+    const webBtn = document.getElementById('openTgWeb');
+    if (appLink) appLink.href = webLink;
+    if (webBtn) webBtn.href = shareLink;
+    if (box) box.hidden = false;
+    return;
+  }
 
   if (!IS_MOBILE) {
     const opened = window.open(webLink, '_blank', 'noopener');
@@ -439,7 +465,11 @@ function sendToTelegram() {
   let i = 0;
   const tryNext = () => {
     if (document.visibilityState !== 'visible') return; // ушли в Telegram
-    if (i >= steps.length) return;
+    if (i >= steps.length) {
+      const box = document.getElementById('sendFallback');
+      if (box) box.hidden = false;
+      return;
+    }
     window.location.href = steps[i++];
     setTimeout(tryNext, 1800);
   };
@@ -447,15 +477,12 @@ function sendToTelegram() {
   setTimeout(tryNext, 1800);
 
   // Ручная страховка: обычная ссылка, если ни один вариант не сработал.
-  const note = document.getElementById('copyNote');
-  if (note && !note.querySelector('a')) {
-    const a = document.createElement('a');
-    a.href = shareLink;
-    a.textContent = 'Открыть Telegram вручную';
-    a.rel = 'noopener';
-    note.appendChild(document.createElement('br'));
-    note.appendChild(a);
-  }
+  const box = document.getElementById('sendFallback');
+  const appLink = document.getElementById('openTgApp');
+  const webBtn = document.getElementById('openTgWeb');
+  if (appLink) appLink.href = webLink;
+  if (webBtn) webBtn.href = shareLink;
+  if (box) box.hidden = false;
 }
 
 /* =========================================================
