@@ -276,6 +276,20 @@ body{
   box-shadow:0 20px 40px -18px rgba(201,106,131,1);
 }
 
+/* тихий второстепенный вариант (например, «Пока не надо») */
+.actions--quiet{margin-top:6px}
+.btn--quiet{
+  flex:none;width:auto;min-width:0;
+  padding:10px 16px;
+  background:none;border:none;
+  font-size:13.5px;font-weight:500;
+  color:var(--muted);
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.btn--quiet:not(:disabled):hover{transform:none;filter:none;color:var(--rose-deep)}
+.btn--quiet:not(:disabled):active{transform:none}
+
 /* ============ Финал ============ */
 .send-fallback{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .send-fallback .btn{
@@ -348,6 +362,8 @@ body{
   .option{flex-direction:row;align-items:center;gap:12px;padding:14px 16px}
   .option__icon{margin-bottom:0;font-size:22px}
   .btn{min-width:100%}
+  .btn--quiet{min-width:0;padding:10px 16px}
+  .actions--quiet{justify-content:center}
 }
 
 @media (prefers-reduced-motion:reduce){

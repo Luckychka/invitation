@@ -130,6 +130,17 @@ function optionHTML(opt, i, selectedValue, className = '') {
 /* =========================================================
    Экраны
    ========================================================= */
+/* Блок-кнопка на случай, если автопереход в Telegram не сработал.
+   Одинаковый для всех экранов, поэтому вынесен отдельно. */
+function sendFallbackHTML(note) {
+  return `
+    <div class="send-fallback" id="sendFallback" hidden>
+      <a class="btn btn--yes" id="openTgApp" href="#">Открыть чат в Telegram</a>
+      <a class="btn btn--ghost" id="openTgWeb" href="#" target="_blank" rel="noopener">Открыть в обычном браузере</a>
+      <p class="note">${note}</p>
+    </div>`;
+}
+
 function introScreen() {
   return `
     <span class="eyebrow">для тебя</span>
@@ -140,7 +151,12 @@ function introScreen() {
     </p>
     <div class="actions">
       <button class="btn btn--primary" type="button" id="startBtn">Смотреть, что там </button>
-    </div>`;
+    </div>
+    <div class="actions actions--quiet">
+      <button class="btn btn--quiet" type="button" id="declineBtn">Пока не надо</button>
+    </div>
+    <p class="note" id="copyNote"></p>
+    ${sendFallbackHTML('Сайт открыт внутри Telegram — нажми первую кнопку, сообщение уже будет в поле отправки.')}`;
 }
 
 function moodScreen() {
@@ -236,11 +252,7 @@ function finalScreen() {
       <button class="btn btn--yes" type="button" id="agreeBtn">Я согласна! </button>
     </div>
 
-    <div class="send-fallback" id="sendFallback" hidden>
-      <a class="btn btn--yes" id="openTgApp" href="#">Открыть чат в Telegram</a>
-      <a class="btn btn--ghost" id="openTgWeb" href="#" target="_blank" rel="noopener">Открыть в обычном браузере</a>
-      <p class="note">Сайт открыт внутри Telegram — поэтому текст не мог подставиться сам. Нажми первую кнопку: сообщение уже будет в поле отправки.</p>
-    </div>
+    <div class="send-fallback-slot">${sendFallbackHTML('Сайт открыт внутри Telegram — поэтому текст не мог подставиться сам. Нажми первую кнопку: сообщение уже будет в поле отправки.')}</div>
 
     <p class="note" id="copyNote"></p>
     <p class="note" style="margin-top:4px">
@@ -322,6 +334,9 @@ function bind() {
   const startBtn = document.getElementById('startBtn');
   if (startBtn) startBtn.addEventListener('click', () => go(1));
 
+  const declineBtn = document.getElementById('declineBtn');
+  if (declineBtn) declineBtn.addEventListener('click', declineInTelegram);
+
   const dateInput = document.getElementById('dateInput');
   if (dateInput) {
     dateInput.addEventListener('change', () => {
@@ -382,6 +397,15 @@ function buildMessage() {
   return lines.join('\n');
 }
 
+function buildDeclineMessage() {
+  return [
+    'Пока не надо',
+    '',
+    'Но всё равно спасибо, что заглянула.',
+    'Было очень приятно.',
+  ].join('\n');
+}
+
 function setNote(text) {
   const note = document.getElementById('copyNote');
   if (note) note.textContent = text || '';
@@ -417,7 +441,14 @@ function copyFallback(text) {
 }
 
 function sendToTelegram() {
-  const message = buildMessage();
+  openTelegram(buildMessage(), 'Открой чат в Telegram и напиши «согласна» — детали я уже знаю.');
+}
+
+function declineInTelegram() {
+  openTelegram(buildDeclineMessage(), 'Открой чат в Telegram и напиши «пока не надо» — я всё понял.');
+}
+
+function openTelegram(message, failNote) {
   const user = encodeURIComponent(CONFIG.telegram);
   const enc = encodeURIComponent(message);
 
@@ -430,7 +461,7 @@ function sendToTelegram() {
 
   copyText(message).then((copied) => {
     if (!copied) {
-      setNote('Открой чат в Telegram и напиши «согласна» — детали я уже знаю.');
+      setNote(failNote);
       showToast('Не получилось скопировать текст автоматически');
       return;
     }
@@ -442,20 +473,29 @@ function sendToTelegram() {
     showToast('Готово! Открываю Telegram');
   });
 
-  // Во встроенном браузере Telegram автопереход не сработает — только по нажатию.
-  if (IN_TELEGRAM) {
-    const box = document.getElementById('sendFallback');
-    const appLink = document.getElementById('openTgApp');
-    const webBtn = document.getElementById('openTgWeb');
+  // Кнопки-страховка: их прячем заранее и показываем, если автопереход не сработал.
+  const box = document.getElementById('sendFallback');
+  const appLink = document.getElementById('openTgApp');
+  const webBtn = document.getElementById('openTgWeb');
+  const showFallback = () => {
     if (appLink) appLink.href = webLink;
     if (webBtn) webBtn.href = shareLink;
     if (box) box.hidden = false;
+  };
+  showFallback();
+
+  // Во встроенном браузере Telegram автопереход не сработает — только по нажатию.
+  if (IN_TELEGRAM) {
+    showFallback();
     return;
   }
 
   if (!IS_MOBILE) {
     const opened = window.open(webLink, '_blank', 'noopener');
-    if (!opened) window.location.href = webLink;
+    if (!opened) {
+      window.location.href = webLink;
+      showFallback();
+    }
     return;
   }
 
@@ -466,8 +506,7 @@ function sendToTelegram() {
   const tryNext = () => {
     if (document.visibilityState !== 'visible') return; // ушли в Telegram
     if (i >= steps.length) {
-      const box = document.getElementById('sendFallback');
-      if (box) box.hidden = false;
+      showFallback();
       return;
     }
     window.location.href = steps[i++];
@@ -475,14 +514,6 @@ function sendToTelegram() {
   };
   window.location.href = deepLink;
   setTimeout(tryNext, 1800);
-
-  // Ручная страховка: обычная ссылка, если ни один вариант не сработал.
-  const box = document.getElementById('sendFallback');
-  const appLink = document.getElementById('openTgApp');
-  const webBtn = document.getElementById('openTgWeb');
-  if (appLink) appLink.href = webLink;
-  if (webBtn) webBtn.href = shareLink;
-  if (box) box.hidden = false;
 }
 
 /* =========================================================
