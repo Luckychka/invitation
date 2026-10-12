@@ -73,13 +73,15 @@ TODAY.setHours(0, 0, 0, 0);
 const card = document.getElementById('card');
 const topbar = document.getElementById('topbar');
 const backBtn = document.getElementById('backBtn');
-const progressBar = document.getElementById('progressBar');
+const progress = document.getElementById('progress');
 const counter = document.getElementById('counter');
 const hint = document.getElementById('hint');
 const toast = document.getElementById('toast');
 
 const TOTAL_STEPS = 6;
 let stepIndex = 0;
+
+progress.innerHTML = Array.from({ length: TOTAL_STEPS }, () => '<span class="progress__dot"></span>').join('');
 
 /* =========================================================
    Помощники
@@ -280,8 +282,11 @@ function canEnter(i) {
   }
 }
 
-function render() {
+function render(direction = 0) {
   card.innerHTML = RENDERERS[stepIndex]();
+  card.classList.remove('is-forward', 'is-back');
+  if (direction > 0) card.classList.add('is-forward');
+  else if (direction < 0) card.classList.add('is-back');
 
   const isIntro = stepIndex === 0;
   topbar.hidden = isIntro;
@@ -290,7 +295,11 @@ function render() {
     : 'Нажимай на варианты — двигаться можно и назад';
 
   if (!isIntro) {
-    progressBar.style.width = `${(stepIndex / TOTAL_STEPS) * 100}%`;
+    [...progress.children].forEach((dot, i) => {
+      dot.classList.toggle('is-done', i < stepIndex);
+      dot.classList.toggle('is-active', i === stepIndex);
+    });
+    progress.setAttribute('aria-valuenow', String(stepIndex));
     counter.textContent = `${stepIndex}/${TOTAL_STEPS}`;
   }
 
@@ -302,7 +311,7 @@ function go(delta) {
   const next = Math.min(RENDERERS.length - 1, Math.max(0, stepIndex + delta));
   if (next !== stepIndex && canEnter(next)) {
     stepIndex = next;
-    render();
+    render(delta);
   }
 }
 
