@@ -528,7 +528,7 @@ function openTelegram(message, failNote) {
 /* =========================================================
    Фоновые эффекты
    ========================================================= */
-const GLYPHS = ['✦', '✧', '·', '·', '✦'];
+const GLYPHS = ['✨', '🦋', '☕', '✦', '✧', '🎈', '💫'];
 
 function spawnAmbient() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -536,15 +536,15 @@ function spawnAmbient() {
   const box = document.getElementById('ambient');
   if (!box) return;
 
-  const count = window.innerWidth < 600 ? 8 : 12;
+  const count = window.innerWidth < 600 ? 12 : 18;
 
   for (let i = 0; i < count; i++) {
     const span = document.createElement('span');
     span.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-    span.style.left = `${4 + Math.random() * 92}%`;
-    span.style.fontSize = `${11 + Math.random() * 14}px`;
-    span.style.animationDuration = `${38 + Math.random() * 30}s`;
-    span.style.animationDelay = `${-Math.random() * 60}s`;
+    span.style.left = `${2 + Math.random() * 94}%`;
+    span.style.fontSize = `${14 + Math.random() * 18}px`;
+    span.style.animationDuration = `${26 + Math.random() * 26}s`;
+    span.style.animationDelay = `${-Math.random() * 50}s`;
     box.appendChild(span);
   }
 }
