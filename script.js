@@ -406,16 +406,19 @@ function copyFallback(text) {
 function sendToTelegram() {
   const message = buildMessage();
   const user = encodeURIComponent(CONFIG.telegram);
+  const enc = encodeURIComponent(message);
 
-  // Telegram-приложение на телефоне умеет подставлять текст через tg://-схему,
-  // в браузере t.me открывает чат и подставляет текст сам.
-  const deepLink = `tg://resolve?domain=${user}&text=${encodeURIComponent(message)}`;
-  const webLink = `https://t.me/${user}?text=${encodeURIComponent(message)}`;
+  // 1) tg://resolve — Telegram сразу открывает чат с уже набранным текстом.
+  const deepLink = `tg://resolve?domain=${user}&text=${enc}`;
+  // 2) Официальный share-ссылка: открывает выбор чата, текст уже лежит в поле.
+  const shareLink = `https://t.me/share/url?url=${enc}&text=${enc}`;
+  // 3) Просто чат (последний вариант).
+  const webLink = `https://t.me/${user}?text=${enc}`;
 
   copyText(message).then((copied) => {
     if (copied) {
       setNote(IS_MOBILE
-        ? 'Открываю Telegram — текст уже подставлен в поле отправки.'
+        ? 'Открываю Telegram — текст уже должен быть в поле отправки.'
         : 'Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
       showToast('Готово! Открываю Telegram');
     } else {
@@ -424,15 +427,34 @@ function sendToTelegram() {
     }
   });
 
-  if (IS_MOBILE) {
-    // Открываем приложение; если оно не установлено — страховка через обычную ссылку.
-    window.location.href = deepLink;
-    setTimeout(() => {
-      if (document.visibilityState === 'visible') window.location.href = webLink;
-    }, 1600);
-  } else {
+  if (!IS_MOBILE) {
     const opened = window.open(webLink, '_blank', 'noopener');
     if (!opened) window.location.href = webLink;
+    return;
+  }
+
+  // Пробуем варианты по очереди, пока страница остаётся открытой —
+  // значит ни один из них не перехватил пользователя.
+  const steps = [deepLink, shareLink, webLink];
+  let i = 0;
+  const tryNext = () => {
+    if (document.visibilityState !== 'visible') return; // ушли в Telegram
+    if (i >= steps.length) return;
+    window.location.href = steps[i++];
+    setTimeout(tryNext, 1800);
+  };
+  window.location.href = deepLink;
+  setTimeout(tryNext, 1800);
+
+  // Ручная страховка: обычная ссылка, если ни один вариант не сработал.
+  const note = document.getElementById('copyNote');
+  if (note && !note.querySelector('a')) {
+    const a = document.createElement('a');
+    a.href = shareLink;
+    a.textContent = 'Открыть Telegram вручную';
+    a.rel = 'noopener';
+    note.appendChild(document.createElement('br'));
+    note.appendChild(a);
   }
 }
 

@@ -309,6 +309,7 @@ body{
   transition:color .2s;
 }
 .linkish:hover{color:var(--rose-deep)}
+.note a{color:var(--rose-deep);font-weight:600}
 
 /* ============ Тост ============ */
 .toast{
