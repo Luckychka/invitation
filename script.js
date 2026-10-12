@@ -526,6 +526,30 @@ function openTelegram(message, failNote) {
 }
 
 /* =========================================================
+   Фоновые эффекты
+   ========================================================= */
+const GLYPHS = ['✦', '✧', '·', '·', '✦'];
+
+function spawnAmbient() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const box = document.getElementById('ambient');
+  if (!box) return;
+
+  const count = window.innerWidth < 600 ? 8 : 12;
+
+  for (let i = 0; i < count; i++) {
+    const span = document.createElement('span');
+    span.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+    span.style.left = `${4 + Math.random() * 92}%`;
+    span.style.fontSize = `${11 + Math.random() * 14}px`;
+    span.style.animationDuration = `${38 + Math.random() * 30}s`;
+    span.style.animationDelay = `${-Math.random() * 60}s`;
+    box.appendChild(span);
+  }
+}
+
+/* =========================================================
    Старт
    ========================================================= */
 backBtn.addEventListener('click', () => go(-1));
@@ -533,4 +557,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') go(-1);
 });
 
+spawnAmbient();
 render();
