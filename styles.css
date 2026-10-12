@@ -62,20 +62,6 @@ body{
   66%{transform:translate3d(-3vw,4vh,0) scale(.95)}
 }
 
-.hearts{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.hearts span{
-  position:absolute;bottom:-40px;
-  font-size:18px;opacity:0;
-  animation:rise linear infinite;
-  filter:drop-shadow(0 4px 6px rgba(201,106,131,.18));
-}
-@keyframes rise{
-  0%{transform:translateY(0) rotate(0deg) scale(.7);opacity:0}
-  12%{opacity:.65}
-  85%{opacity:.5}
-  100%{transform:translateY(-108dvh) rotate(22deg) scale(1.15);opacity:0}
-}
-
 /* ============ Каркас ============ */
 .stage{
   width:min(620px,100%);

@@ -362,7 +362,7 @@ function bind() {
 function buildMessage() {
   const place = PLACES[state.place] || PLACES.cafe;
   const lines = [
-    `Я согласна! `,
+    `Я согласна!`,
     '',
     'Мы выбрали:',
     `• Настроение: ${state.mood || '—'}`,
@@ -380,36 +380,14 @@ function setNote(text) {
   if (note) note.textContent = text || '';
 }
 
-function sendToTelegram() {
-  const message = buildMessage();
-  const url = `https://t.me/${encodeURIComponent(CONFIG.telegram)}?text=${encodeURIComponent(message)}`;
+const IS_MOBILE = /Android|iPhone|iPad|iPod|iPodTouch|Mobile|Silk|Kindle/i.test(navigator.userAgent)
+  || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(pointer: fine)').matches);
 
-  // Открываем чат сразу, пока «жест клика» ещё действителен (иначе браузер
-  // может заблокировать всплывающее окно).
-  const opened = window.open(url, '_blank', 'noopener');
-  if (!opened) showToast('Браузер заблокировал новое окно — разреши всплывающие, или открой Telegram вручную');
-
-  // Параллельно копируем текст: в Telegram Desktop он не подставляется сам.
+function copyText(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(message).then(
-      () => {
-        setNote('Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
-        showToast('Готово! Открываю Telegram');
-      },
-      () => {
-        if (copyFallback(message)) {
-          setNote('Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
-        } else {
-          setNote('Чтобы отправить ответ: открой чат и напиши «согласна», там будут все детали.');
-          showToast('Не получилось скопировать текст автоматически');
-        }
-      },
-    );
-  } else if (copyFallback(message)) {
-    setNote('Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
-  } else {
-    setNote('Открой чат в Telegram и напиши «согласна» — детали я уже знаю 😊');
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => copyFallback(text));
   }
+  return Promise.resolve(copyFallback(text));
 }
 
 function copyFallback(text) {
@@ -419,27 +397,42 @@ function copyFallback(text) {
   ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
   document.body.appendChild(ta);
   ta.select();
+  ta.setSelectionRange(0, ta.value.length);
   const ok = document.execCommand ? document.execCommand('copy') : false;
   document.body.removeChild(ta);
-  return ok;
+  return !!ok;
 }
 
-/* =========================================================
-   Фоновые сердечки
-   ========================================================= */
-function spawnHearts() {
-  const box = document.getElementById('hearts');
-  const glyphs = ['💗', '💕', '✨', '🦋', '💛', '☕'];
-  const count = window.innerWidth < 600 ? 12 : 18;
+function sendToTelegram() {
+  const message = buildMessage();
+  const user = encodeURIComponent(CONFIG.telegram);
 
-  for (let i = 0; i < count; i++) {
-    const span = document.createElement('span');
-    span.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
-    span.style.left = `${Math.random() * 100}%`;
-    span.style.fontSize = `${12 + Math.random() * 16}px`;
-    span.style.animationDuration = `${16 + Math.random() * 16}s`;
-    span.style.animationDelay = `${-Math.random() * 30}s`;
-    box.appendChild(span);
+  // Telegram-приложение на телефоне умеет подставлять текст через tg://-схему,
+  // в браузере t.me открывает чат и подставляет текст сам.
+  const deepLink = `tg://resolve?domain=${user}&text=${encodeURIComponent(message)}`;
+  const webLink = `https://t.me/${user}?text=${encodeURIComponent(message)}`;
+
+  copyText(message).then((copied) => {
+    if (copied) {
+      setNote(IS_MOBILE
+        ? 'Открываю Telegram — текст уже подставлен в поле отправки.'
+        : 'Текст сообщения скопирован — если Telegram не подставил его сам, просто вставь в чат.');
+      showToast('Готово! Открываю Telegram');
+    } else {
+      setNote('Открой чат в Telegram и напиши «согласна» — детали я уже знаю.');
+      showToast('Не получилось скопировать текст автоматически');
+    }
+  });
+
+  if (IS_MOBILE) {
+    // Открываем приложение; если оно не установлено — страховка через обычную ссылку.
+    window.location.href = deepLink;
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') window.location.href = webLink;
+    }, 1600);
+  } else {
+    const opened = window.open(webLink, '_blank', 'noopener');
+    if (!opened) window.location.href = webLink;
   }
 }
 
@@ -451,5 +444,4 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') go(-1);
 });
 
-spawnHearts();
 render();
