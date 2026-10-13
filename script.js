@@ -3,8 +3,34 @@
    ========================================================= */
 const CONFIG = {
   name: 'Лиза',          // имя девушки
-  telegram: 'Belo0yo'   // твой юзернейм в Telegram (без @)
+  telegram: 'Belo0yo',   // твой юзернейм в Telegram (без @)
+  notifyUrl: '',         // адрес воркера Cloudflare для уведомлений о заходах
 };
+
+/* =========================================================
+   Уведомление о заходе на сайт
+   ========================================================= */
+function notifyVisit() {
+  const url = CONFIG.notifyUrl;
+  if (!url || !navigator.onLine) return;
+  if (sessionStorage.getItem('visitNotified')) return;
+  sessionStorage.setItem('visitNotified', '1');
+
+  const payload = {
+    screen: `${screen.width}x${screen.height} @${window.devicePixelRatio}x`,
+    ua: navigator.userAgent,
+    lang: navigator.language,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ref: document.referrer || '',
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {});
+}
 
 /* =========================================================
    Данные опросника
@@ -558,4 +584,5 @@ document.addEventListener('keydown', (e) => {
 });
 
 spawnAmbient();
+notifyVisit();
 render();
