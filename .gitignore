@@ -1,0 +1,3 @@
+deploy/.wrangler/
+deploy/node_modules/
+node_modules/
