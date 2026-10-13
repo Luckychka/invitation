@@ -1,0 +1,22 @@
+name: Проверка воркера
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверить воркер уведомлений
+        run: |
+          set -e
+          URL="https://invitation-visits.liza-invitation.workers.dev/?test=1"
+          echo "GET $URL"
+          curl -sS -m 25 -w "\nHTTP %{http_code}\n" "$URL" | tee /tmp/worker.log
+          if grep -q "HTTP 200" /tmp/worker.log; then
+            echo "Воркер отвечает, всё в порядке."
+          else
+            echo "Воркер недоступен."
+          fi
